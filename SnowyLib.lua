@@ -1,11 +1,12 @@
--- SnowyLib — Final Masterpiece Version (100% Website Fidelity)
--- Every detail, from the 0.03 opacity scanlines to the spring-physics knobs, is matched.
+-- SnowyLib — Final Responsive Masterpiece (1:1 Website Fidelity)
+-- Resolves: Animation smoothness, Responsive sizing, Draggable Toggle.
 
 local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
 local RunService       = game:GetService("RunService")
 local localPlayer      = Players.LocalPlayer
+local Camera           = workspace.CurrentCamera
 
 local RAW = "https://raw.githubusercontent.com/bqhyuu/SnowyLib/refs/heads/main/"
 local LUCIDE_ICONS   = loadstring(game:HttpGet(RAW .. "Icon/LucideIcons.lua"))()
@@ -19,7 +20,7 @@ local THEMES = {
 	Darker   = { bg = Color3.fromRGB(0, 0, 0),    accent = Color3.fromRGB(255, 255, 255) },
 }
 
--- ── Animation Constants (React-Matched) ───────────────────────────────────
+-- ── Constants ──────────────────────────────────────────────────────────────
 
 local SPRING_FAST = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SPRING_SLO  = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -27,7 +28,7 @@ local LINEAR      = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
 local HEADER_H    = 54
 local SIDEBAR_W   = 160
 
--- ── Internal Utils ─────────────────────────────────────────────────────────
+-- ── Utilities ──────────────────────────────────────────────────────────────
 
 local function create(instanceType, props)
 	local inst = Instance.new(instanceType)
@@ -74,6 +75,35 @@ local function tween(inst, info, props)
 	local t = TweenService:Create(inst, info, props)
 	t:Play()
 	return t
+end
+
+local function makeDraggable(windowObject, handle, target)
+	local dragging, dragInput, dragStart, startPosition
+	table.insert(windowObject._connections, handle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true; dragStart = input.Position; startPosition = target.Position
+			local ended; ended = input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false; ended:Disconnect() end
+			end)
+		end
+	end))
+	table.insert(windowObject._connections, handle.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+	end))
+	table.insert(windowObject._connections, UserInputService.InputChanged:Connect(function(input)
+		if dragging and input == dragInput then
+			local delta = input.Position - dragStart
+			target.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+		end
+	end))
+end
+
+local function createIconVisual(parent, icon, fallbackText)
+	local resolved = resolveIcon(icon)
+	if resolved and (type(resolved) == "string" and (string.find(resolved, "rbxassetid://") or string.find(resolved, "http"))) then
+		return create("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromOffset(14, 14), Image = resolved, Parent = parent })
+	end
+	return create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromOffset(14, 14), Font = Enum.Font.GothamBold, Text = tostring(fallbackText or "•"), TextSize = 10, Parent = parent })
 end
 
 -- ── Component Implementation ───────────────────────────────────────────────
@@ -199,7 +229,7 @@ local function createDropdown(window, parts, cfg)
 	updateTrig(); return { Set = function(_, v) selected = v; updateTrig(); if open then build(sInp.Text) end end }
 end
 
--- ── Section & Structural Logic ──────────────────────────────────────────────
+-- ── Section & Core Logic ───────────────────────────────────────────────────
 
 local function createSection(window, parent, name)
 	local wrapper = create("Frame", { AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, Parent = parent })
@@ -220,7 +250,7 @@ local function createSection(window, parent, name)
 		local top = create("Frame", { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, Parent = card })
 		local tit = create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.GothamBold, Text = title, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = top })
 		if desc and desc ~= "" then
-			top.Size = UDim2.new(1, 0, 0, 36); local d = create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(0.6, 0, 0, 14), Font = Enum.Font.GothamMedium, Text = desc, TextSize = 9, Parent = top })
+			top.Size = UDim2.new(1, 0, 0, 34); local d = create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(0.6, 0, 0, 14), Font = Enum.Font.GothamMedium, Text = desc, TextSize = 9, Parent = top })
 			window:_registerStyler(function() d.TextColor3 = Color3.new(1,1,1); d.TextTransparency = 0.5 end)
 		end
 		local right = create("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0.4, 0, 1, 0), BackgroundTransparency = 1, Parent = top })
@@ -271,11 +301,12 @@ local function createTab(window, name, icon)
 	local lab = create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromOffset(36, 0), Size = UDim2.new(1, -40, 1, 0), Font = Enum.Font.GothamBlack, Text = name:upper(), TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = btn })
 	local dot = create("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(4, 4), Visible = false, Parent = btn }); applyCorner(dot, UDim.new(1, 0))
 
-	local page = create("ScrollingFrame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(), ScrollBarThickness = 3, Visible = false, Parent = window._content })
+	local pageContainer = create("CanvasGroup", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false, Parent = window._content })
+	local page = create("ScrollingFrame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(), ScrollBarThickness = 3, Parent = pageContainer })
 	applyPadding(page, 24, 24, 24, 24); local layout = create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12), Parent = page })
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() page.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 48) end)
 
-	local tab = { _btn = btn, _page = page, _name = name }
+	local tab = { _btn = btn, _pageContainer = pageContainer, _name = name }
 	local defSect
 	local function getDef() if not defSect then defSect = createSection(window, page, "") end; return defSect end
 
@@ -301,6 +332,7 @@ end
 
 local SnowyLib = {}
 SnowyLib.__index = SnowyLib
+
 function SnowyLib:_getColors() return THEMES[self.ThemeName or "Dark"] end
 function SnowyLib:_registerStyler(cb) table.insert(self._stylers, cb); cb(self:_getColors()) end
 function SnowyLib:_refreshTheme() local c = self:_getColors(); for _, cb in ipairs(self._stylers) do cb(c) end end
@@ -308,13 +340,13 @@ function SnowyLib:_refreshTheme() local c = self:_getColors(); for _, cb in ipai
 function SnowyLib:SelectTab(tab)
 	if self._activeTab == tab then return end
 	if self._activeTab then
-		local prev = self._activeTab._page
+		local prev = self._activeTab._pageContainer
 		tween(prev, SPRING_FAST, { GroupTransparency = 1, Position = UDim2.fromOffset(0, 15) })
 		task.delay(0.2, function() prev.Visible = false end)
 	end
 	self._activeTab = tab
-	tab._page.Visible = true; tab._page.GroupTransparency = 1; tab._page.Position = UDim2.fromOffset(0, 15)
-	tween(tab._page, SPRING_SLO, { GroupTransparency = 0, Position = UDim2.fromOffset(0, 0) })
+	tab._pageContainer.Visible = true; tab._pageContainer.GroupTransparency = 1; tab._pageContainer.Position = UDim2.fromOffset(0, 15)
+	tween(tab._pageContainer, SPRING_SLO, { GroupTransparency = 0, Position = UDim2.fromOffset(0, 0) })
 	self:_refreshTheme()
 end
 
@@ -351,23 +383,26 @@ end
 
 function SnowyLib:Destroy() for _, c in ipairs(self._connections) do if c and c.Disconnect then c:Disconnect() end end; self._screen:Destroy() end
 
-function SnowyLib.CreateWindow(cfg)
-	local self = setmetatable({ _stylers = {}, _connections = {}, _tabs = {}, _options = {}, ThemeName = cfg.Theme or "Dark" }, SnowyLib)
+function SnowyLib.CreateWindow(config)
+	config = config or {}
+	local self = setmetatable({ _stylers = {}, _connections = {}, _tabs = {}, _options = {}, ThemeName = config.Theme or "Dark" }, SnowyLib)
 	local screen = create("ScreenGui", { Name = "SnowyLib", IgnoreGuiInset = true, ResetOnSpawn = false, Parent = localPlayer:WaitForChild("PlayerGui") })
 	self._screen = screen
 
-	local main = create("CanvasGroup", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(640, 460), Parent = screen })
+	-- Fixed Responsive Size
+	local vw, vh = Camera.ViewportSize.X, Camera.ViewportSize.Y
+	local w = math.min(640, vw * 0.92)
+	local h = math.min(460, vh * 0.88)
+
+	local main = create("CanvasGroup", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(w, h), Parent = screen })
 	applyCorner(main, UDim.new(0, 24)); local mStroke = applyStroke(main, 2, Color3.new(1,1,1), 0.8); self._main = main
 	local mScale = create("UIScale", { Scale = 1, Parent = main })
 
-	-- Scanline Overlay Pattern (Website 1:1 Texture Overlay)
 	local pattern = create("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "rbxassetid://13217036657", ImageTransparency = 0.97, TileSize = UDim2.fromOffset(24, 24), ScaleType = Enum.ScaleType.Tile, ZIndex = 0, Parent = main })
 
-	-- Opening Animation (React mode="scale")
 	main.GroupTransparency = 1; mScale.Scale = 0.6
 	tween(main, SPRING_SLO, { GroupTransparency = 0 }); tween(mScale, SPRING_SLO, { Scale = 1 })
 
-	-- Anime Glowing Border Pulse
 	task.spawn(function()
 		while main.Parent do
 			local c = self:_getColors().accent
@@ -380,18 +415,14 @@ function SnowyLib.CreateWindow(cfg)
 
 	local head = create("Frame", { Size = UDim2.new(1, 0, 0, HEADER_H), BackgroundTransparency = 0.97, Parent = main })
 	applyCorner(head, UDim.new(0, 24)); applyPadding(head, 24, 24, 0, 0)
-	local tit = create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(0.5, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = (cfg.Title or "MEYY HUB"):upper(), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = head })
+	local tit = create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(0.5, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = (config.Title or "MEYY HUB"):upper(), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = head })
 	local close = create("TextButton", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, Text = "×", Font = Enum.Font.GothamBlack, TextSize = 18, Parent = head })
 
 	local body = create("Frame", { Position = UDim2.fromOffset(0, HEADER_H), Size = UDim2.new(1, 0, 1, -HEADER_H), BackgroundTransparency = 1, Parent = main })
 	local side = create("Frame", { Size = UDim2.new(0, SIDEBAR_W, 1, 0), Parent = body })
 	applyPadding(side, 12, 12, 12, 12); create("UIListLayout", { Padding = UDim.new(0, 4), Parent = side }); self._sidebar = side
-	
-	local content = create("Frame", { Position = UDim2.fromOffset(SIDEBAR_W, 0), Size = UDim2.new(1, -SIDEBAR_W, 1, 0), BackgroundTransparency = 1, Parent = body })
-	self._content = content
-	
-	local pHead = create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = content })
-	applyPadding(pHead, 24, 24, 0, 0)
+	local cont = create("Frame", { Position = UDim2.fromOffset(SIDEBAR_W, 0), Size = UDim2.new(1, -SIDEBAR_W, 1, 0), BackgroundTransparency = 1, Parent = body }); self._content = cont
+	local pHead = create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = cont }); applyPadding(pHead, 24, 24, 0, 0)
 	local pTit = create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Font = Enum.Font.GothamBlack, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left, Parent = pHead }); self._pageTitle = pTit
 
 	self._notifyHolder = create("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -24, 0, 24), Size = UDim2.new(0, 240, 1, 0), BackgroundTransparency = 1, Parent = screen })
@@ -407,22 +438,33 @@ function SnowyLib.CreateWindow(cfg)
 
 	self:_registerStyler(function(c)
 		main.BackgroundColor3 = c.bg; main.BackgroundTransparency = 0.15
-		tit.TextColor3 = Color3.new(1,1,1); close.TextColor3 = Color3.new(1,1,1); side.BackgroundColor3 = Color3.new(0,0,0); side.BackgroundTransparency = 0.95
 		pTit.TextColor3 = c.accent; dCard.BackgroundColor3 = c.bg; self._diagT.TextColor3 = Color3.new(1,1,1); self._diagB.TextColor3 = Color3.new(1,1,1); self._diagB.TextTransparency = 0.3
 	end)
 
 	makeDraggable(self, head, main); close.MouseButton1Click:Connect(function() self:Destroy() end)
 	
-	-- Floating Toggle (1:1 with Website config.logo)
+	-- Persistent Floating Toggle Button
 	local float = create("ImageButton", { Name = "Float", Position = UDim2.fromOffset(32, 32), Size = UDim2.fromOffset(44, 44), BackgroundColor3 = Color3.fromRGB(20, 20, 26), Parent = screen })
-	applyCorner(float, UDim.new(0, 12)); applyStroke(float, 1, Color3.new(1,1,1), 0.9); float.Image = cfg.Logo or "rbxassetid://6031075938"
+	applyCorner(float, UDim.new(0, 12)); applyStroke(float, 1, Color3.new(1,1,1), 0.9); float.Image = config.Logo or "rbxassetid://6031075938"
 	local dot = create("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 2, 0, -2), Size = UDim2.fromOffset(10, 10), BackgroundColor3 = Color3.fromRGB(239, 68, 68), Visible = false, Parent = float })
 	applyCorner(dot, UDim.new(1, 0)); applyStroke(dot, 2, Color3.fromRGB(26,26,26))
 	
-	float.MouseButton1Click:Connect(function() main.Visible = not main.Visible; dot.Visible = not main.Visible; if main.Visible then tween(main, SPRING_FAST, { GroupTransparency = 0 }); tween(mScale, SPRING_FAST, { Scale = 1 }) else tween(main, SPRING_FAST, { GroupTransparency = 1 }); tween(mScale, SPRING_FAST, { Scale = 0.7 }) end end)
+	local function toggleUI()
+		if not main.Visible then
+			main.Visible = true; dot.Visible = false
+			tween(main, SPRING_FAST, { GroupTransparency = 0 }); tween(mScale, SPRING_FAST, { Scale = 1 })
+		else
+			dot.Visible = true
+			tween(mScale, SPRING_FAST, { Scale = 0.7 })
+			local t = tween(main, SPRING_FAST, { GroupTransparency = 1 })
+			t.Completed:Connect(function() main.Visible = false end)
+		end
+	end
+
+	float.MouseButton1Click:Connect(toggleUI); makeDraggable(self, float, float)
 	task.spawn(function() while float.Parent do if dot.Visible then tween(dot, LINEAR, { BackgroundTransparency = 0.5 }); task.wait(0.6); tween(dot, LINEAR, { BackgroundTransparency = 0 }); task.wait(0.6) else task.wait(0.5) end end end)
 
-	table.insert(self._connections, UserInputService.InputBegan:Connect(function(i, g) if not g and i.KeyCode == (cfg.ToggleKey or Enum.KeyCode.RightControl) then float.MouseButton1Click:Fire() end end))
+	table.insert(self._connections, UserInputService.InputBegan:Connect(function(i, g) if not g and i.KeyCode == (config.ToggleKey or Enum.KeyCode.RightControl) then toggleUI() end end))
 	self.Options = setmetatable({}, { __index = function(_, k) return self._options[k] end })
 	function self:CreateTab(c) local t = createTab(self, c.Title or "Tab", c.Icon); table.insert(self._tabs, t); if #self._tabs == 1 then self:SelectTab(t) end; return t end
 	return self
