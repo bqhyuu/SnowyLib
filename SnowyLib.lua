@@ -1378,8 +1378,8 @@ function SnowyLib:_refreshTheme()
 end
 
 function SnowyLib:_updateFloatingState()
-	local colors = self:_getColors()
-	self._floatingButton.BackgroundTransparency = self.Visible and 0.1 or 0.25
+	self._floatingButton.ImageTransparency = self.Visible and 0 or 0.4
+	self._floatingButton.BackgroundTransparency = self.Visible and 0 or 0.3
 	if self._floatingRedDot then
 		self._floatingRedDot.Visible = not self.Visible
 	end
@@ -1804,87 +1804,80 @@ function SnowyLib.CreateWindow(config)
 	})
 	self._screenGui = screenGui
 
-	local floatingButton = create("TextButton", {
-		Name = "FloatingButton",
-		Position = UDim2.fromOffset(24, 24),
-		Size = UDim2.fromOffset(46, 46),
-		BackgroundTransparency = 0.15,
+	local floatingButton = create("ImageButton", {
+		Name            = "FloatingButton",
+		Position        = UDim2.fromOffset(24, 24),
+		Size            = UDim2.fromOffset(44, 44),
+		BackgroundColor3 = Color3.fromRGB(20, 20, 26),
 		BorderSizePixel = 0,
 		AutoButtonColor = false,
-		Text = "",
-		Parent = screenGui,
+		Image           = config.Logo or config.IconLogo or "",
+		ImageColor3     = Color3.new(1,1,1),
+		Parent          = screenGui,
 	})
 	applyCorner(floatingButton, UDim.new(0, 12))
 	local floatingStroke = applyStroke(floatingButton, 1)
 
-	local floatingImage, floatingText = createIconVisual(floatingButton, config.IconLogo or config.Logo, string.sub(config.Title or "M", 1, 1))
-	if floatingImage then
-		floatingImage.AnchorPoint = Vector2.new(0.5, 0.5)
-		floatingImage.Position = UDim2.fromScale(0.5, 0.5)
-		floatingImage.Size = UDim2.fromOffset(26, 26)
-	end
-	if floatingText then
-		floatingText.AnchorPoint = Vector2.new(0.5, 0.5)
-		floatingText.Position = UDim2.fromScale(0.5, 0.5)
-		floatingText.Size = UDim2.fromScale(1, 1)
-		floatingText.Font = Enum.Font.GothamBlack
-		floatingText.TextSize = 16
-	end
+	-- Fallback text nếu không có logo
+	local floatingFallback = create("TextLabel", {
+		BackgroundTransparency = 1,
+		Size   = UDim2.fromScale(1, 1),
+		Font   = Enum.Font.GothamBlack,
+		Text   = string.sub(config.Title or "M", 1, 1),
+		TextSize = 18,
+		Visible = (config.Logo == nil and config.IconLogo == nil),
+		Parent  = floatingButton,
+	})
 
-	-- Red dot (visible when minimized)
+	-- Red dot khi minimized
 	local redDot = create("Frame", {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 2, 0, -2),
-		Size = UDim2.fromOffset(10, 10),
+		AnchorPoint      = Vector2.new(1, 0),
+		Position         = UDim2.new(1, 3, 0, -3),
+		Size             = UDim2.fromOffset(10, 10),
 		BackgroundColor3 = Color3.fromRGB(239, 68, 68),
-		BorderSizePixel = 0,
-		Visible = false,
-		ZIndex = 5,
-		Parent = floatingButton,
+		BorderSizePixel  = 0,
+		Visible          = false,
+		ZIndex           = 5,
+		Parent           = floatingButton,
 	})
 	applyCorner(redDot, UDim.new(1, 0))
 
-	-- Tooltip "Open Meyy Hub" (visible on hover when minimized)
+	-- Tooltip
 	local tooltip = create("Frame", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(1, 10, 0.5, 0),
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 26),
-		BackgroundColor3 = Color3.fromRGB(8, 8, 10),
-		BorderSizePixel = 0,
-		Visible = false,
-		ZIndex = 10,
-		Parent = floatingButton,
+		AnchorPoint       = Vector2.new(0, 0.5),
+		Position          = UDim2.new(1, 10, 0.5, 0),
+		AutomaticSize     = Enum.AutomaticSize.X,
+		Size              = UDim2.fromOffset(0, 28),
+		BackgroundColor3  = Color3.fromRGB(12, 12, 16),
+		BorderSizePixel   = 0,
+		Visible           = false,
+		ZIndex            = 10,
+		Parent            = floatingButton,
 	})
 	applyCorner(tooltip, UDim.new(0, 8))
 	applyStroke(tooltip, 1)
-	applyPadding(tooltip, 10, 10, 0, 0)
-	local tooltipLabel = create("TextLabel", {
+	applyPadding(tooltip, 12, 12, 0, 0)
+	create("TextLabel", {
 		BackgroundTransparency = 1,
-		Size = UDim2.new(0, 0, 1, 0),
+		Size          = UDim2.new(0, 0, 1, 0),
 		AutomaticSize = Enum.AutomaticSize.X,
-		Font = Enum.Font.GothamBold,
-		Text = "Open " .. (config.Title or "Meyy Hub"),
-		TextSize = 9,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = tooltip,
+		Font          = Enum.Font.GothamBold,
+		Text          = "Open " .. (config.Title or "Hub"),
+		TextSize      = 10,
+		TextColor3    = Color3.new(1, 1, 1),
+		Parent        = tooltip,
 	})
-	local _tooltipLabel = tooltipLabel
 
 	table.insert(self._connections, floatingButton.MouseEnter:Connect(function()
-		if not self.Visible then
-			tooltip.Visible = true
-		end
+		if not self.Visible then tooltip.Visible = true end
 	end))
 	table.insert(self._connections, floatingButton.MouseLeave:Connect(function()
 		tooltip.Visible = false
 	end))
 
-	self._floatingButton = floatingButton
-	self._floatingRedDot = redDot
-	self._floatingImage  = floatingImage
-	self._floatingText   = floatingText
+	self._floatingButton  = floatingButton
+	self._floatingRedDot  = redDot
+	self._floatingFallback = floatingFallback
 
 	local main = create("Frame", {
 		Name = "Main",
@@ -2185,31 +2178,18 @@ function SnowyLib.CreateWindow(config)
 		dialogTitle.TextColor3 = colors.Text
 		dialogBody.TextColor3 = colors.MutedText
 		floatingStroke.Color = colors.Accent
-		if floatingImage then floatingImage.ImageColor3 = colors.Accent end
-		if floatingText then floatingText.TextColor3 = colors.Accent end
+		floatingButton.BackgroundColor3 = colors.Surface
+		floatingFallback.TextColor3 = colors.Accent
+		if floatingFallback.Visible then
+			floatingFallback.TextColor3 = colors.Accent
+		end
 	end)
 
 	makeDraggable(self, header, main)
 	makeDraggable(self, floatingButton, floatingButton)
 
 	table.insert(self._connections, close.MouseButton1Click:Connect(function()
-		self:Dialog({
-			Title = "Are you sure?",
-			Content = "Are you sure you want to close the UI?",
-			Buttons = {
-				{
-					Title = "Close UI",
-					Primary = true,
-					Callback = function()
-						self:SetVisible(false)
-					end,
-				},
-				{
-					Title = "Cancel",
-					Callback = function() end,
-				},
-			},
-		})
+		self:Destroy()
 	end))
 
 	table.insert(self._connections, floatingButton.MouseButton1Click:Connect(function()
@@ -2229,9 +2209,11 @@ function SnowyLib.CreateWindow(config)
 	self:_updateFloatingState()
 
 	-- Floating button intro animation
+	floatingButton.ImageTransparency = 1
 	floatingButton.BackgroundTransparency = 1
-	tween(floatingButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		BackgroundTransparency = 0.15,
+	tween(floatingButton, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		ImageTransparency = 0,
+		BackgroundTransparency = 0,
 	})
 
 	-- Red dot pulse loop
