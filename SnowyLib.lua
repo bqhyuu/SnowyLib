@@ -1804,29 +1804,32 @@ function SnowyLib.CreateWindow(config)
 	})
 	self._screenGui = screenGui
 
+	local DEFAULT_LOGO = "rbxassetid://6031075938" -- Roblox default star icon
+	local logoImage = config.Logo or config.IconLogo or DEFAULT_LOGO
+
 	local floatingButton = create("ImageButton", {
-		Name            = "FloatingButton",
-		Position        = UDim2.fromOffset(24, 24),
-		Size            = UDim2.fromOffset(44, 44),
+		Name             = "FloatingButton",
+		Position         = UDim2.fromOffset(24, 24),
+		Size             = UDim2.fromOffset(44, 44),
 		BackgroundColor3 = Color3.fromRGB(20, 20, 26),
-		BorderSizePixel = 0,
-		AutoButtonColor = false,
-		Image           = config.Logo or config.IconLogo or "",
-		ImageColor3     = Color3.new(1,1,1),
-		Parent          = screenGui,
+		BorderSizePixel  = 0,
+		AutoButtonColor  = false,
+		Image            = logoImage,
+		ImageColor3      = Color3.new(1, 1, 1),
+		Parent           = screenGui,
 	})
 	applyCorner(floatingButton, UDim.new(0, 12))
 	local floatingStroke = applyStroke(floatingButton, 1)
 
-	-- Fallback text nếu không có logo
+	-- Fallback text chỉ hiện nếu image load fail (không bao giờ xảy ra với default logo)
 	local floatingFallback = create("TextLabel", {
 		BackgroundTransparency = 1,
-		Size   = UDim2.fromScale(1, 1),
-		Font   = Enum.Font.GothamBlack,
-		Text   = string.sub(config.Title or "M", 1, 1),
+		Size     = UDim2.fromScale(1, 1),
+		Font     = Enum.Font.GothamBlack,
+		Text     = string.sub(config.Title or "S", 1, 1),
 		TextSize = 18,
-		Visible = (config.Logo == nil and config.IconLogo == nil),
-		Parent  = floatingButton,
+		Visible  = false,
+		Parent   = floatingButton,
 	})
 
 	-- Red dot khi minimized
